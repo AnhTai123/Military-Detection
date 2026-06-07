@@ -61,6 +61,15 @@ def build_detector(args):
             text_threshold=args.text_threshold,
             device=args.device,
         )
+    if args.detector == "yolo":
+        from .detectors.yolo import YOLODetector
+        return YOLODetector(
+            model_path=args.detector_path,
+            conf_threshold=args.box_threshold,
+            iou_threshold=args.iou_threshold,
+            device=args.device,
+            imgsz=args.imgsz,
+        )
     raise ValueError(f"Unknown detector: {args.detector}")
 
 
@@ -68,6 +77,14 @@ def build_vlm(args):
     if args.vlm == "clip":
         from .vlm.clip_classifier import CLIPClassifier
         return CLIPClassifier(device=args.device)
+    if args.vlm == "grounding_dino":
+        from .vlm.grounding_dino import GroundingDINOVLM
+        return GroundingDINOVLM(
+            model_path=args.vlm_path,
+            box_threshold=args.vlm_box_threshold,
+            text_threshold=args.vlm_text_threshold,
+            device=args.device,
+        )
     if args.vlm == "qwen":
         from .vlm.qwen_vl import QwenVLClassifier
         return QwenVLClassifier(model_path=args.vlm_path, device=args.device)
@@ -100,14 +117,30 @@ def iter_frames(source: str):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--source", required=True, help="video file hoặc folder ảnh")
-    ap.add_argument("--detector", default="grounding_dino",
-                    choices=["grounding_dino"])
-    ap.add_argument("--detector-path", required=True)
-    ap.add_argument("--vlm", default="clip", choices=["clip", "qwen"])
-    ap.add_argument("--vlm-path", default="Qwen/Qwen2.5-VL-3B-Instruct")
+    ap.add_argument("--detector", default="yolo",
+                    choices=["yolo", "grounding_dino"])
+    ap.add_argument("--detector-path", required=True,
+                    help="YOLO: path to .pt file | GDino: HF model path")
+    ap.add_argument("--vlm", default="grounding_dino",
+                    choices=["clip", "grounding_dino", "qwen"])
+    ap.add_argument("--vlm-path", default=None,
+                    help="VLM model path (GDino fine-tuned / Qwen). "
+                         "Không cần nếu --vlm clip")
     ap.add_argument("--device", default="cuda")
-    ap.add_argument("--box-threshold", type=float, default=0.3)
-    ap.add_argument("--text-threshold", type=float, default=0.25)
+    # detector thresholds
+    ap.add_argument("--box-threshold", type=float, default=0.25,
+                    help="YOLO conf / GDino box threshold")
+    ap.add_argument("--text-threshold", type=float, default=0.25,
+                    help="GDino text threshold (chỉ dùng khi detector=grounding_dino)")
+    ap.add_argument("--iou-threshold", type=float, default=0.45,
+                    help="NMS IoU threshold (YOLO)")
+    ap.add_argument("--imgsz", type=int, default=640,
+                    help="Input size cho YOLO")
+    # VLM thresholds
+    ap.add_argument("--vlm-box-threshold", type=float, default=0.1,
+                    help="GDino box threshold khi dùng làm VLM (crop đã tight)")
+    ap.add_argument("--vlm-text-threshold", type=float, default=0.1,
+                    help="GDino text threshold khi dùng làm VLM")
     ap.add_argument("--min-vlm-score", type=float, default=0.0)
     ap.add_argument("--reclassify-after", type=int, default=None,
                     help="phân loại lại sau N frame (mặc định: chỉ 1 lần)")

@@ -6,13 +6,16 @@ pillow
 # Tracking
 supervision>=0.18.0
 
-# Detector (GroundingDINO via HuggingFace)
+# Detector: YOLO (mặc định)
+ultralytics>=8.0.0
+
+# Detector / VLM: GroundingDINO via HuggingFace
 transformers>=4.40.0
 torch
 
-# VLM (default: CLIP — lightweight)
+# VLM (tùy chọn: CLIP — rất nhẹ)
 open_clip_torch
 
-# VLM (optional: Qwen2.5-VL — heavier, only if --vlm qwen)
+# VLM (tùy chọn: Qwen2.5-VL — nặng hơn, chỉ khi --vlm qwen)
 # qwen-vl-utils
 # accelerate
