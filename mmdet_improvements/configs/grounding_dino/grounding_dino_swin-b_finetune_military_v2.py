@@ -96,11 +96,10 @@ train_pipeline = [
             ]
         ]),
     dict(type='FilterAnnotations', min_gt_bbox_wh=(1e-2, 1e-2)),
-    dict(
-        type='RandomSamplingNegPos',
-        tokenizer_name='bert-base-uncased',
-        num_sample_negative=85,
-        max_tokens=256),
+    # RandomSamplingNegPos BỊ BỎ: transform này kỳ vọng text là dict (GLIP caption
+    # format), nhưng khi dùng COCO dataset + return_classes=True thì text là tuple
+    # tên class → gây AttributeError: 'tuple' object has no attribute 'items'.
+    # Base config đã xử lý text đúng cách qua dataset pipeline, không cần override.
     dict(
         type='PackDetInputs',
         meta_keys=('img_id', 'img_path', 'ori_shape', 'img_shape',
