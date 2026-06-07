@@ -2,6 +2,12 @@
 # Full training run — 3000 steps, 1 GPU, no SLURM, no flash_attn.
 # Run from: /home/aiplatform/workspace/Eagle/Embodied
 # Usage:  bash scripts/train_full.sh
+#
+# Memory profile (A100 80GB, 3B model, bf16, freeze_backbone=True):
+#   batch=1, grad_accum=8  → ~30-40 GB  (safe, effective batch = 8)
+#   batch=2, grad_accum=4  → ~45-60 GB  (tight, may OOM with long sequences)
+#   batch=4, grad_accum=2  → ~65-75 GB  (risky)
+# Keeping batch=1, grad_accum=8 for safety (same effective batch size as debug ×2).
 
 set -euo pipefail
 
@@ -30,8 +36,8 @@ CUDA_VISIBLE_DEVICES=0 torchrun \
   --vision_select_layer -1 \
   --dataloader_num_workers 4 \
   --num_train_epochs 5 \
-  --per_device_train_batch_size 2 \
-  --gradient_accumulation_steps 4 \
+  --per_device_train_batch_size 1 \
+  --gradient_accumulation_steps 8 \
   --save_strategy steps \
   --save_steps 500 \
   --save_total_limit 3 \
