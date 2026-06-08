@@ -25,17 +25,21 @@ else
   echo "[INFO] JSONL already exists, skipping conversion."
 fi
 
-# 3. Always sync recipe (format may have changed)
+# 3. Always sync recipe (format may have changed) — skip if same file
 RECIPE_DST="${EAGLE_DIR}/locany_recipe/military_all_classes_recipe.json"
 mkdir -p "$(dirname "${RECIPE_DST}")"
-cp "${REPO_DIR}/locany_recipe/military_all_classes_recipe.json" "${RECIPE_DST}"
-echo "[INFO] Recipe synced → ${RECIPE_DST}"
+if [ "${REPO_DIR}/locany_recipe/military_all_classes_recipe.json" != "${RECIPE_DST}" ]; then
+  cp "${REPO_DIR}/locany_recipe/military_all_classes_recipe.json" "${RECIPE_DST}"
+fi
+echo "[INFO] Recipe ready → ${RECIPE_DST}"
 
-# 4. Sync deepspeed config
+# 4. Sync deepspeed config — skip if same file
 DS_DST="${EAGLE_DIR}/deepspeed_configs/zero_stage2_config.json"
 mkdir -p "$(dirname "${DS_DST}")"
-cp "${REPO_DIR}/deepspeed_configs/zero_stage2_config.json" "${DS_DST}"
-echo "[INFO] DeepSpeed config synced."
+if [ "${REPO_DIR}/deepspeed_configs/zero_stage2_config.json" != "${DS_DST}" ]; then
+  cp "${REPO_DIR}/deepspeed_configs/zero_stage2_config.json" "${DS_DST}"
+fi
+echo "[INFO] DeepSpeed config ready."
 
 # 5. Apply LoRA config (use_llm_lora=64, use_backbone_lora=64)
 #    Saves a local config so --model_name_or_path can be pointed to it.

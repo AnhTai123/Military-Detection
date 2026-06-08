@@ -11,14 +11,18 @@ EAGLE_DIR=/home/aiplatform/workspace/Eagle/Embodied
 
 cd "${EAGLE_DIR}"
 
-# 1. Sync recipe + deepspeed config
+# 1. Sync recipe + deepspeed config — skip if same file
 RECIPE_DST="${EAGLE_DIR}/locany_recipe/military_all_classes_recipe.json"
 mkdir -p "$(dirname "${RECIPE_DST}")"
-cp "${REPO_DIR}/locany_recipe/military_all_classes_recipe.json" "${RECIPE_DST}"
+if [ "${REPO_DIR}/locany_recipe/military_all_classes_recipe.json" != "${RECIPE_DST}" ]; then
+  cp "${REPO_DIR}/locany_recipe/military_all_classes_recipe.json" "${RECIPE_DST}"
+fi
 
 DS_DST="${EAGLE_DIR}/deepspeed_configs/zero_stage2_config.json"
 mkdir -p "$(dirname "${DS_DST}")"
-cp "${REPO_DIR}/deepspeed_configs/zero_stage2_config.json" "${DS_DST}"
+if [ "${REPO_DIR}/deepspeed_configs/zero_stage2_config.json" != "${DS_DST}" ]; then
+  cp "${REPO_DIR}/deepspeed_configs/zero_stage2_config.json" "${DS_DST}"
+fi
 
 # 2. Apply LoRA config
 echo "[INFO] Applying LoRA config..."
