@@ -71,8 +71,7 @@ mkdir -p "${OUT_DIR}"
 rm -f "${OUT_DIR}/done.txt"
 
 echo "[INFO] Starting full training (3000 steps, LoRA)..."
-CUDA_HOME=/home/aiplatform/.conda/envs/locateanything \
-  LAUNCHER=pytorch CUDA_VISIBLE_DEVICES=0 torchrun \
+LAUNCHER=pytorch CUDA_VISIBLE_DEVICES=0 torchrun \
   --standalone \
   --nproc_per_node=1 \
   eaglevl/train/locany_finetune_magi_stream.py \
@@ -95,7 +94,7 @@ CUDA_HOME=/home/aiplatform/.conda/envs/locateanything \
   --report_to tensorboard \
   --grad_checkpoint True \
   --freeze_backbone True \
-  --deepspeed deepspeed_configs/zero_stage2_config.json \
+  --optim adamw_torch \
   2>&1 | tee "${OUT_DIR}/training_log.txt"
 
 echo "[INFO] Full training finished."
