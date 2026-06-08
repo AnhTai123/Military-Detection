@@ -87,6 +87,7 @@ LAUNCHER=pytorch CUDA_VISIBLE_DEVICES=0 torchrun \
   --logging_steps 10 \
   --report_to tensorboard \
   --grad_checkpoint True \
+  --freeze_backbone True \
   --deepspeed deepspeed_configs/zero_stage2_config.json \
   2>&1 | tee "${OUT_DIR}/training_log.txt"
 
