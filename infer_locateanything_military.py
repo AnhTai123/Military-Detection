@@ -92,6 +92,9 @@ def parse_args():
                    help="Folder chứa ảnh (flat, không phân cấp class)")
     p.add_argument("--out-dir",
                    default="/home/aiplatform/workspace/outputs_locateanything_military")
+    p.add_argument("--model-id",
+                   default=MODEL_ID,
+                   help="Model ID hoặc path checkpoint fine-tuned")
     p.add_argument("--device",      default="cuda:0")
     p.add_argument("--mode",        default="hybrid",
                    choices=["fast", "hybrid", "slow"])
@@ -673,20 +676,21 @@ def main():
 
     # ── Load model ────────────────────────────────────────────────────────────
     dtype = torch.bfloat16 if "cuda" in args.device else torch.float32
-    print("Loading model...")
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True)
+    model_id = args.model_id
+    print(f"Loading model: {model_id}")
+    tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
     processor = AutoProcessor.from_pretrained(
-        MODEL_ID, trust_remote_code=True,
+        model_id, trust_remote_code=True,
         min_pixels=128*28*28, max_pixels=512*28*28)
     try:
         model = AutoModel.from_pretrained(
-            MODEL_ID, torch_dtype=dtype, trust_remote_code=True,
+            model_id, torch_dtype=dtype, trust_remote_code=True,
             attn_implementation="flash_attention_2",
         ).to(args.device).eval()
         print("Model loaded [flash_attention_2]")
     except Exception:
         model = AutoModel.from_pretrained(
-            MODEL_ID, torch_dtype=dtype, trust_remote_code=True,
+            model_id, torch_dtype=dtype, trust_remote_code=True,
         ).to(args.device).eval()
         print("Model loaded [standard attention]")
 
