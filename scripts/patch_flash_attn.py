@@ -111,7 +111,12 @@ def main():
     total_files = 0
     patched_files = 0
 
+    self_path = os.path.abspath(__file__)
     for fpath in sorted(iter_py_files(root)):
+        # Never patch this script itself (its regex patterns contain the
+        # literal "flash_attention_2" string and would be corrupted).
+        if os.path.abspath(fpath) == self_path or os.path.basename(fpath) == "patch_flash_attn.py":
+            continue
         total_files += 1
         with open(fpath, encoding="utf-8", errors="replace") as f:
             src = f.read()
