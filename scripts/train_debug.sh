@@ -50,7 +50,6 @@ CUDA_VISIBLE_DEVICES=0 LAUNCHER=pytorch torchrun \
   --standalone \
   --nproc_per_node=1 \
   eaglevl/train/locany_finetune_magi_stream.py \
-  --launcher pytorch \
   --model_name_or_path nvidia/LocateAnything-3B \
   --meta_path ./locany_recipe/military_all_classes_recipe.json \
   --output_dir work_dirs/locany_military_all_debug \
