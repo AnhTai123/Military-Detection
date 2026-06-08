@@ -67,7 +67,8 @@ rm -f "${OUT_DIR}/done.txt"
 echo "[INFO] Cleared stale done.txt (if any)."
 
 echo "[INFO] Starting debug training (100 steps, LoRA)..."
-DS_BUILD_OPS=0 LAUNCHER=pytorch CUDA_VISIBLE_DEVICES=0 torchrun \
+DS_BUILD_OPS=0 DS_BUILD_FUSED_ADAM=0 DS_BUILD_FUSED_LAMB=0 DS_BUILD_TRANSFORMER=0 DS_BUILD_STOCHASTIC_TRANSFORMER=0 \
+  LAUNCHER=pytorch CUDA_VISIBLE_DEVICES=0 torchrun \
   --standalone \
   --nproc_per_node=1 \
   eaglevl/train/locany_finetune_magi_stream.py \
