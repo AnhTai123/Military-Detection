@@ -16,7 +16,7 @@ cd /home/aiplatform/workspace/Eagle/Embodied
 mkdir -p work_dirs/locany_military_all_full
 
 echo "[INFO] Starting full training (3000 steps)..."
-CUDA_VISIBLE_DEVICES=0 torchrun \
+CUDA_VISIBLE_DEVICES=0 LAUNCHER=pytorch torchrun \
   --standalone \
   --nproc_per_node=1 \
   eaglevl/train/locany_finetune_magi_stream.py \

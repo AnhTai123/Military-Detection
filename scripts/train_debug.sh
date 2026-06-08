@@ -46,7 +46,7 @@ fi
 mkdir -p /home/aiplatform/workspace/Eagle/Embodied/work_dirs/locany_military_all_debug
 
 echo "[INFO] Starting debug training (100 steps)..."
-CUDA_VISIBLE_DEVICES=0 torchrun \
+CUDA_VISIBLE_DEVICES=0 LAUNCHER=pytorch torchrun \
   --standalone \
   --nproc_per_node=1 \
   eaglevl/train/locany_finetune_magi_stream.py \
