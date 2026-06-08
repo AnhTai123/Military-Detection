@@ -41,17 +41,18 @@ if [ "${REPO_DIR}/deepspeed_configs/zero_stage2_config.json" != "${DS_DST}" ]; t
 fi
 echo "[INFO] DeepSpeed config ready."
 
-# 5. Apply LoRA config (use_llm_lora=64, use_backbone_lora=64)
-#    Saves a local config so --model_name_or_path can be pointed to it.
-echo "[INFO] Applying LoRA config..."
-python - <<'PYEOF'
-from transformers import AutoConfig
-cfg = AutoConfig.from_pretrained("nvidia/LocateAnything-3B", trust_remote_code=True)
-cfg.use_llm_lora = 64
-cfg.use_backbone_lora = 64
-cfg.save_pretrained("/tmp/locateanything_lora_config")
-print("[INFO] LoRA config saved to /tmp/locateanything_lora_config")
-PYEOF
+# 5. Build a COMPLETE local model dir with LoRA enabled in config.
+#    (weights symlinked from HF cache + patched config.json). Pointing
+#    --model_name_or_path at this dir makes from_pretrained actually honor
+#    use_llm_lora / use_backbone_lora — saving only a /tmp config.json does NOT,
+#    because the weights are missing and the base model gets loaded instead.
+LORA_MODEL_DIR=/tmp/LocateAnything-3B-lora
+echo "[INFO] Building LoRA model dir..."
+python "${REPO_DIR}/scripts/build_lora_model_dir.py" \
+  --base nvidia/LocateAnything-3B \
+  --out "${LORA_MODEL_DIR}" \
+  --llm_lora 64 \
+  --backbone_lora 64
 
 # 6. Run debug training
 OUT_DIR="${EAGLE_DIR}/work_dirs/locany_military_all_debug"
@@ -69,7 +70,7 @@ LAUNCHER=pytorch CUDA_VISIBLE_DEVICES=0 torchrun \
   --standalone \
   --nproc_per_node=1 \
   eaglevl/train/locany_finetune_magi_stream.py \
-  --model_name_or_path nvidia/LocateAnything-3B \
+  --model_name_or_path "${LORA_MODEL_DIR}" \
   --meta_path ./locany_recipe/military_all_classes_recipe.json \
   --output_dir "${OUT_DIR}" \
   --do_train True \

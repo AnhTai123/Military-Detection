@@ -24,16 +24,16 @@ if [ "${REPO_DIR}/deepspeed_configs/zero_stage2_config.json" != "${DS_DST}" ]; t
   cp "${REPO_DIR}/deepspeed_configs/zero_stage2_config.json" "${DS_DST}"
 fi
 
-# 2. Apply LoRA config
-echo "[INFO] Applying LoRA config..."
-python - <<'PYEOF'
-from transformers import AutoConfig
-cfg = AutoConfig.from_pretrained("nvidia/LocateAnything-3B", trust_remote_code=True)
-cfg.use_llm_lora = 64
-cfg.use_backbone_lora = 64
-cfg.save_pretrained("/tmp/locateanything_lora_config")
-print("[INFO] LoRA config saved.")
-PYEOF
+# 2. Build a COMPLETE local model dir with LoRA enabled in config.
+#    (weights symlinked from HF cache + patched config.json). Required so
+#    from_pretrained actually honors use_llm_lora / use_backbone_lora.
+LORA_MODEL_DIR=/tmp/LocateAnything-3B-lora
+echo "[INFO] Building LoRA model dir..."
+python "${REPO_DIR}/scripts/build_lora_model_dir.py" \
+  --base nvidia/LocateAnything-3B \
+  --out "${LORA_MODEL_DIR}" \
+  --llm_lora 64 \
+  --backbone_lora 64
 
 # 3. Run full training
 OUT_DIR="${EAGLE_DIR}/work_dirs/locany_military_all_full"
@@ -47,7 +47,7 @@ LAUNCHER=pytorch CUDA_VISIBLE_DEVICES=0 torchrun \
   --standalone \
   --nproc_per_node=1 \
   eaglevl/train/locany_finetune_magi_stream.py \
-  --model_name_or_path nvidia/LocateAnything-3B \
+  --model_name_or_path "${LORA_MODEL_DIR}" \
   --meta_path ./locany_recipe/military_all_classes_recipe.json \
   --output_dir "${OUT_DIR}" \
   --do_train True \
