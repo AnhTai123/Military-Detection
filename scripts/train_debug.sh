@@ -76,9 +76,9 @@ CUDA_VISIBLE_DEVICES=0 LAUNCHER=pytorch torchrun \
   --max_grad_norm 1.0 \
   --logging_steps 1 \
   --packing_buffer_size 8 \
-  --max_seq_length 2048 \
-  --max_num_tokens_per_sample 2048 \
-  --max_num_tokens 2048 \
+  --max_seq_length 4096 \
+  --max_num_tokens_per_sample 4096 \
+  --max_num_tokens 4096 \
   --do_train True \
   --grad_checkpoint True \
   --group_by_length False \
