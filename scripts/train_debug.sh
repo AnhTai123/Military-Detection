@@ -57,6 +57,13 @@ PYEOF
 OUT_DIR="${EAGLE_DIR}/work_dirs/locany_military_all_debug"
 mkdir -p "${OUT_DIR}"
 
+# IMPORTANT: the training script exits immediately if done.txt exists in
+# output_dir (the check runs right after init_dist, before logging is even
+# configured, so the "Training done" message is swallowed). A previous run
+# that finished with 0 steps leaves done.txt behind and blocks all reruns.
+rm -f "${OUT_DIR}/done.txt"
+echo "[INFO] Cleared stale done.txt (if any)."
+
 echo "[INFO] Starting debug training (100 steps, LoRA)..."
 LAUNCHER=pytorch CUDA_VISIBLE_DEVICES=0 torchrun \
   --standalone \

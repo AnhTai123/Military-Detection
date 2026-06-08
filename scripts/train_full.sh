@@ -39,6 +39,9 @@ PYEOF
 OUT_DIR="${EAGLE_DIR}/work_dirs/locany_military_all_full"
 mkdir -p "${OUT_DIR}"
 
+# Clear stale done.txt — the script exits immediately if it exists.
+rm -f "${OUT_DIR}/done.txt"
+
 echo "[INFO] Starting full training (3000 steps, LoRA)..."
 LAUNCHER=pytorch CUDA_VISIBLE_DEVICES=0 torchrun \
   --standalone \
