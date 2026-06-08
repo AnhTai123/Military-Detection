@@ -147,6 +147,10 @@ def main():
     for split, coco_path in SPLITS.items():
         out_path = os.path.join(OUTPUT_DIR, f"{split}_all_classes.jsonl")
         print(f"\n[{split.upper()}] {coco_path}")
+        if not os.path.exists(coco_path):
+            print(f"  [SKIP] COCO file không tồn tại — bỏ qua split '{split}'. "
+                  f"(Không sao nếu chỉ thiếu test; training chỉ cần train.)")
+            continue
         n = convert_split(coco_path, out_path)
         print(f"  → {out_path}  ({n} samples)")
     print("\nDone.")
