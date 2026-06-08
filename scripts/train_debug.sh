@@ -58,7 +58,12 @@ python "${REPO_DIR}/scripts/build_lora_model_dir.py" \
   --llm_lora 64 \
   --backbone_lora 0
 
-# 6. Run debug training
+# 6. Patch MoonViT SDPA: drop explicit attention_mask so PyTorch picks
+#    the memory-efficient backend instead of materialising the full N×N matrix.
+echo "[INFO] Patching MoonViT SDPA attention mask..."
+python "${REPO_DIR}/scripts/patch_sdpa_mask.py" --root "${EAGLE_DIR}"
+
+# 7. Run debug training
 OUT_DIR="${EAGLE_DIR}/work_dirs/locany_military_all_debug"
 mkdir -p "${OUT_DIR}"
 
