@@ -1,11 +1,8 @@
 {
-  "datasets": [
-    {
-      "name": "military_detection_all_classes",
-      "path": "/home/aiplatform/workspace/Eagle/Embodied/locany_military_data_all/train_all_classes.jsonl",
-      "root": "/home/aiplatform/workspace/research/research_res/merged_dataset/images",
-      "repeat": 1,
-      "length": 800
-    }
-  ]
+  "military_detection_all_classes": {
+    "annotation": "/home/aiplatform/workspace/Eagle/Embodied/locany_military_data_all/train_all_classes.jsonl",
+    "root": "/home/aiplatform/workspace/research/research_res/merged_dataset/images",
+    "repeat_time": 1.0,
+    "data_augment": true
+  }
 }
