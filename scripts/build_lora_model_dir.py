@@ -28,7 +28,7 @@ def main():
     ap.add_argument("--base", default="nvidia/LocateAnything-3B")
     ap.add_argument("--out", default="/tmp/LocateAnything-3B-lora")
     ap.add_argument("--llm_lora", type=int, default=64)
-    ap.add_argument("--backbone_lora", type=int, default=64)
+    ap.add_argument("--backbone_lora", type=int, default=0)
     args = ap.parse_args()
 
     # 1. Ensure the full snapshot (weights + code + tokenizer) is on disk.

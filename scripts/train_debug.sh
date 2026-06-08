@@ -52,7 +52,7 @@ python "${REPO_DIR}/scripts/build_lora_model_dir.py" \
   --base nvidia/LocateAnything-3B \
   --out "${LORA_MODEL_DIR}" \
   --llm_lora 64 \
-  --backbone_lora 64
+  --backbone_lora 0
 
 # 6. Run debug training
 OUT_DIR="${EAGLE_DIR}/work_dirs/locany_military_all_debug"
