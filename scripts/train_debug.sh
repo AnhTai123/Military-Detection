@@ -11,10 +11,24 @@ EAGLE_DIR=/home/aiplatform/workspace/Eagle/Embodied
 
 cd "${EAGLE_DIR}"
 
-# 1. Apply flash_attn → sdpa patches (idempotent)
-echo "[INFO] Applying flash_attn patches..."
-python "${REPO_DIR}/scripts/patch_flash_attn.py" --root "${EAGLE_DIR}"
-echo "[INFO] Patches applied."
+# 1. Attention backend: prefer flash-attn (avoids the 33k×33k attention matrix
+#    that SDPA materializes in the vision encoder -> 36GiB OOM). Fall back to
+#    sdpa + reduced vision tokens only if flash-attn can't be installed.
+echo "[INFO] Ensuring flash-attn is available..."
+if python -c "import flash_attn" 2>/dev/null; then
+  echo "[INFO] flash-attn already installed."
+  ATTN_IMPL=flash_attention_2
+  python "${REPO_DIR}/scripts/patch_flash_attn.py" --root "${EAGLE_DIR}" --revert || true
+elif pip install flash-attn --no-build-isolation 2>&1 | tail -5 && python -c "import flash_attn" 2>/dev/null; then
+  echo "[INFO] flash-attn installed successfully."
+  ATTN_IMPL=flash_attention_2
+  python "${REPO_DIR}/scripts/patch_flash_attn.py" --root "${EAGLE_DIR}" --revert || true
+else
+  echo "[WARN] flash-attn unavailable — falling back to sdpa + reduced vision tokens."
+  ATTN_IMPL=sdpa
+  python "${REPO_DIR}/scripts/patch_flash_attn.py" --root "${EAGLE_DIR}"
+fi
+echo "[INFO] Attention backend: ${ATTN_IMPL}"
 
 # 2. Convert dataset (idempotent)
 JSONL_TRAIN="${EAGLE_DIR}/locany_military_data_all/train_all_classes.jsonl"
@@ -80,7 +94,7 @@ LAUNCHER=pytorch CUDA_VISIBLE_DEVICES=0 torchrun \
   --lr_scheduler_type cosine \
   --bf16 True \
   --block_size 6 \
-  --attn_implementation sdpa \
+  --attn_implementation "${ATTN_IMPL}" \
   --per_device_train_batch_size 1 \
   --gradient_accumulation_steps 8 \
   --max_seq_length 8192 \

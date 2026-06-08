@@ -11,6 +11,22 @@ EAGLE_DIR=/home/aiplatform/workspace/Eagle/Embodied
 
 cd "${EAGLE_DIR}"
 
+# 0. Attention backend: prefer flash-attn (avoids the vision-encoder attention
+#    matrix that SDPA materializes -> OOM). Fall back to sdpa if unavailable.
+echo "[INFO] Ensuring flash-attn is available..."
+if python -c "import flash_attn" 2>/dev/null; then
+  ATTN_IMPL=flash_attention_2
+  python "${REPO_DIR}/scripts/patch_flash_attn.py" --root "${EAGLE_DIR}" --revert || true
+elif pip install flash-attn --no-build-isolation 2>&1 | tail -5 && python -c "import flash_attn" 2>/dev/null; then
+  ATTN_IMPL=flash_attention_2
+  python "${REPO_DIR}/scripts/patch_flash_attn.py" --root "${EAGLE_DIR}" --revert || true
+else
+  echo "[WARN] flash-attn unavailable — falling back to sdpa."
+  ATTN_IMPL=sdpa
+  python "${REPO_DIR}/scripts/patch_flash_attn.py" --root "${EAGLE_DIR}"
+fi
+echo "[INFO] Attention backend: ${ATTN_IMPL}"
+
 # 1. Sync recipe + deepspeed config — skip if same file
 RECIPE_DST="${EAGLE_DIR}/locany_recipe/military_all_classes_recipe.json"
 mkdir -p "$(dirname "${RECIPE_DST}")"
@@ -57,7 +73,7 @@ LAUNCHER=pytorch CUDA_VISIBLE_DEVICES=0 torchrun \
   --lr_scheduler_type cosine \
   --bf16 True \
   --block_size 6 \
-  --attn_implementation sdpa \
+  --attn_implementation "${ATTN_IMPL}" \
   --per_device_train_batch_size 1 \
   --gradient_accumulation_steps 8 \
   --max_seq_length 8192 \

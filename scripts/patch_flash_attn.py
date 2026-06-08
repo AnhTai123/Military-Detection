@@ -14,6 +14,7 @@ Run from the Embodied repo root:
 import argparse
 import os
 import re
+import shutil
 import sys
 
 REPO_ROOT_DEFAULT = "/home/aiplatform/workspace/Eagle/Embodied"
@@ -95,17 +96,43 @@ def iter_py_files(root):
                 yield os.path.join(dirpath, fn)
 
 
+BACKUP_SUFFIX = ".flashattn_bak"
+
+
+def revert(root):
+    """Restore every *.flashattn_bak backup, undoing the sdpa patch."""
+    restored = 0
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if not d.startswith(".") and d != "__pycache__"]
+        for fn in filenames:
+            if not fn.endswith(BACKUP_SUFFIX):
+                continue
+            bak = os.path.join(dirpath, fn)
+            orig = bak[: -len(BACKUP_SUFFIX)]
+            shutil.copyfile(bak, orig)
+            os.remove(bak)
+            restored += 1
+            print(f"[REVERT] {os.path.relpath(orig, root)}")
+    print(f"\nReverted {restored} file(s) to flash_attention_2 originals.")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", default=REPO_ROOT_DEFAULT)
     parser.add_argument("--dry-run", action="store_true",
                         help="Show what would change but do not write files")
+    parser.add_argument("--revert", action="store_true",
+                        help="Restore original flash_attention_2 files from .flashattn_bak backups")
     args = parser.parse_args()
 
     root = os.path.abspath(args.root)
     if not os.path.isdir(root):
         print(f"ERROR: repo root not found: {root}", file=sys.stderr)
         sys.exit(1)
+
+    if args.revert:
+        revert(root)
+        return
 
     print(f"Scanning: {root}  (dry_run={args.dry_run})")
     total_files = 0
@@ -132,6 +159,10 @@ def main():
             print(c)
 
         if not args.dry_run:
+            # Back up the pristine original once, so --revert can restore it.
+            bak = fpath + BACKUP_SUFFIX
+            if not os.path.exists(bak):
+                shutil.copyfile(fpath, bak)
             with open(fpath, "w", encoding="utf-8") as f:
                 f.write(dst)
 
