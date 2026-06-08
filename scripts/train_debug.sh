@@ -55,7 +55,19 @@ if [ "${REPO_DIR}/deepspeed_configs/zero_stage2_config.json" != "${DS_DST}" ]; t
 fi
 echo "[INFO] DeepSpeed config ready."
 
-# 5. Build a COMPLETE local model dir with LoRA enabled in config.
+# 5. Create a stub nvcc so DeepSpeed can read the CUDA version without nvcc
+#    being actually installed. DS_BUILD_OPS=0 ensures nothing gets compiled.
+NVCC_STUB=/home/aiplatform/.conda/envs/locateanything/bin/nvcc
+if [ ! -f "${NVCC_STUB}" ]; then
+  echo "[INFO] Creating stub nvcc for DeepSpeed version check..."
+  cat > "${NVCC_STUB}" <<'NVCCEOF'
+#!/bin/bash
+echo "Cuda compilation tools, release 11.8, V11.8.89"
+NVCCEOF
+  chmod +x "${NVCC_STUB}"
+fi
+
+# 6. Build a COMPLETE local model dir with LoRA enabled in config.
 #    (weights symlinked from HF cache + patched config.json). Pointing
 #    --model_name_or_path at this dir makes from_pretrained actually honor
 #    use_llm_lora / use_backbone_lora — saving only a /tmp config.json does NOT,
