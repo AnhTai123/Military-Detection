@@ -126,7 +126,7 @@ def convert_split(coco_path, out_path):
                 "conversations": [
                     {
                         "from": "human",
-                        "value": f"<image>\n{ALL_CLASSES_PROMPT}"
+                        "value": f"<image-1>\n{ALL_CLASSES_PROMPT}"
                     },
                     {
                         "from": "gpt",

@@ -84,8 +84,8 @@ def check_jsonl(jsonl_path, img_root, n_show=3):
 
             # ── kiểm tra human turn có <image> ─────────────────────────
             human_val = convs[0].get("value", "")
-            if "<image>" not in human_val:
-                errors.append(f"Line {i+1}: human turn thiếu <image> token")
+            if "<image-1>" not in human_val and "<image>" not in human_val:
+                errors.append(f"Line {i+1}: human turn thiếu <image-1> token")
 
             # ── kiểm tra gpt turn có <box> ──────────────────────────────
             gpt_val = convs[1].get("value", "")
