@@ -72,6 +72,7 @@ LAUNCHER=pytorch CUDA_VISIBLE_DEVICES=0 torchrun \
   --model_name_or_path nvidia/LocateAnything-3B \
   --meta_path ./locany_recipe/military_all_classes_recipe.json \
   --output_dir "${OUT_DIR}" \
+  --do_train True \
   --max_steps 100 \
   --learning_rate 1e-5 \
   --warmup_ratio 0.1 \
