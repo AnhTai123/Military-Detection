@@ -67,7 +67,7 @@ rm -f "${OUT_DIR}/done.txt"
 echo "[INFO] Cleared stale done.txt (if any)."
 
 echo "[INFO] Starting debug training (100 steps, LoRA)..."
-DS_BUILD_OPS=0 LAUNCHER=pytorch CUDA_VISIBLE_DEVICES=0 torchrun \
+LAUNCHER=pytorch CUDA_VISIBLE_DEVICES=0 torchrun \
   --standalone \
   --nproc_per_node=1 \
   eaglevl/train/locany_finetune_magi_stream.py \
@@ -90,7 +90,6 @@ DS_BUILD_OPS=0 LAUNCHER=pytorch CUDA_VISIBLE_DEVICES=0 torchrun \
   --report_to tensorboard \
   --grad_checkpoint True \
   --freeze_backbone True \
-  --deepspeed deepspeed_configs/zero_stage2_config.json \
   2>&1 | tee "${OUT_DIR}/training_log.txt"
 
 echo "[INFO] Debug training finished."
