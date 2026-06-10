@@ -17,16 +17,30 @@ import shutil
 import sys
 
 TARGET_REL = "eaglevl/model/moon_vit/modeling_vit.py"
+TORCH_IMPORT = "import torch\n"
 REPO_ROOT_DEFAULT = "/home/aiplatform/workspace/Eagle/Embodied"
 
 # Match the sdpa_attention call that passes attention_mask
 # attn_output = F.scaled_dot_product_attention(q, k, v, attention_mask, ...)
 PATTERN = re.compile(
-    r"(F\.scaled_dot_product_attention\s*\([^)]*?)attention_mask([^)]*?\))",
+    r"([ \t]*)(attn_output\s*=\s*F\.scaled_dot_product_attention\s*\([^)]*?attention_mask[^)]*?\))",
     re.MULTILINE | re.DOTALL,
 )
 
-REPLACEMENT = r"\1None\2"
+
+def _replace(m):
+    indent = m.group(1)
+    original = m.group(2)
+    # Replace attention_mask with None and wrap in mem-efficient context
+    patched = re.sub(r"\battention_mask\b", "None", original)
+    return (
+        f"{indent}with torch.backends.cuda.sdp_kernel("
+        f"enable_flash=True, enable_math=False, enable_mem_efficient=True):\n"
+        f"{indent}    {patched.lstrip()}"
+    )
+
+
+REPLACEMENT = _replace
 
 
 def main():
@@ -44,7 +58,11 @@ def main():
     with open(target, encoding="utf-8") as f:
         src = f.read()
 
-    dst, n = PATTERN.subn(REPLACEMENT, src)
+    dst = PATTERN.sub(REPLACEMENT, src)
+    n = len(PATTERN.findall(src))
+    # Ensure torch is imported (needed for sdp_kernel context manager)
+    if n > 0 and "import torch" not in dst.split("\n")[:10]:
+        dst = TORCH_IMPORT + dst
     if n == 0:
         print(f"[INFO] No match found — already patched or pattern changed.")
         return
