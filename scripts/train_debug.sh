@@ -127,7 +127,7 @@ LAUNCHER=pytorch CUDA_VISIBLE_DEVICES=0 torchrun \
   --attn_implementation "${ATTN_IMPL}" \
   --per_device_train_batch_size 1 \
   --gradient_accumulation_steps 8 \
-  --max_seq_length 4096 \
+  --max_seq_length 8192 \
   --save_steps 50 \
   --logging_steps 10 \
   --report_to tensorboard \
