@@ -65,6 +65,12 @@ python "${REPO_DIR}/scripts/build_lora_model_dir.py" \
 echo "[INFO] Patching MoonViT sdpa_attention (per-segment)..."
 python "${REPO_DIR}/scripts/patch_sdpa_segments.py" --root "${EAGLE_DIR}"
 
+# 6b. Patch LocateAnything: clone input_embeds before in-place scatter.
+#     Frozen embeddings (LoRA) + grad checkpointing make input_embeds a leaf
+#     requiring grad -> in-place write raises RuntimeError without the clone.
+echo "[INFO] Patching input_embeds clone..."
+python "${REPO_DIR}/scripts/patch_clone_embeds.py" --root "${EAGLE_DIR}"
+
 # 7. Run debug training
 OUT_DIR="${EAGLE_DIR}/work_dirs/locany_military_all_debug"
 mkdir -p "${OUT_DIR}"
