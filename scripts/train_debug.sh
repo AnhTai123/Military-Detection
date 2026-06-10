@@ -76,11 +76,10 @@ python "${REPO_DIR}/scripts/patch_clone_embeds.py" --root "${EAGLE_DIR}"
 echo "[INFO] Patching SDPA mask diagonal..."
 python "${REPO_DIR}/scripts/patch_mask_diag.py" --root "${EAGLE_DIR}"
 
-# 6d. Diagnostic: register forward hooks that print the FIRST submodule whose
-#     output contains NaN. Grep the log for [NAN-LAYER] to locate the culprit.
-#     (Must run AFTER the clone patch — same target file.)
-echo "[INFO] Patching NaN-layer probe..."
-python "${REPO_DIR}/scripts/patch_layer_probe.py" --root "${EAGLE_DIR}"
+# 6d. (Diagnostic probe disabled — root cause found: NaN in RMSNorm weights,
+#      now fixed by the sanitize block inside patch_clone_embeds.py. Re-enabling
+#      the probe would restore a stale backup and wipe the sanitize patch.)
+# python "${REPO_DIR}/scripts/patch_layer_probe.py" --root "${EAGLE_DIR}"
 
 # 7. Run debug training
 OUT_DIR="${EAGLE_DIR}/work_dirs/locany_military_all_debug"
