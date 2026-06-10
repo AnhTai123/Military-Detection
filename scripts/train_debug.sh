@@ -116,6 +116,14 @@ rm -f "${OUT_DIR}/done.txt"
 echo "[INFO] Cleared stale done.txt (if any)."
 
 echo "[INFO] Starting debug training (100 steps, LoRA)..."
+# Speed knobs (override via env):
+#   ACCUM=4    -> 4 fwd/bwd per step instead of 8 (~2x faster/step)
+#   NO_CKPT=1  -> disable gradient checkpointing (~30-40% faster,
+#                 higher memory; revert to NO_CKPT=0 if OOM)
+ACCUM="${ACCUM:-4}"
+GRAD_CKPT=True
+if [ "${NO_CKPT:-0}" = "1" ]; then GRAD_CKPT=False; fi
+echo "[INFO] gradient_accumulation_steps=${ACCUM}  grad_checkpoint=${GRAD_CKPT}"
 LAUNCHER=pytorch CUDA_VISIBLE_DEVICES=0 torchrun \
   --standalone \
   --nproc_per_node=1 \
@@ -125,19 +133,19 @@ LAUNCHER=pytorch CUDA_VISIBLE_DEVICES=0 torchrun \
   --output_dir "${OUT_DIR}" \
   --do_train True \
   --max_steps 100 \
-  --learning_rate 1e-5 \
+  --learning_rate 2e-5 \
   --warmup_ratio 0.1 \
   --lr_scheduler_type cosine \
   --bf16 True \
   --block_size 6 \
   --attn_implementation "${ATTN_IMPL}" \
   --per_device_train_batch_size 1 \
-  --gradient_accumulation_steps 8 \
+  --gradient_accumulation_steps "${ACCUM}" \
   --max_seq_length 8192 \
   --save_steps 50 \
   --logging_steps 10 \
   --report_to tensorboard \
-  --grad_checkpoint True \
+  --grad_checkpoint "${GRAD_CKPT}" \
   --freeze_backbone True \
   --optim adamw_torch \
   2>&1 | tee "${OUT_DIR}/training_log.txt"
