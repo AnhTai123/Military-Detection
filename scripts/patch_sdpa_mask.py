@@ -28,21 +28,29 @@ PATTERN = re.compile(
 )
 
 
+CHUNK_ATTN_FN = '''
+def _chunked_attention(q, k, v, chunk_size=512):
+    """Tiled attention: O(chunk*N) memory instead of O(N^2)."""
+    import math
+    B, H, N, D = q.shape
+    scale = math.sqrt(D)
+    orig_dtype = q.dtype
+    q, k, v = q.float(), k.float(), v.float()
+    out = torch.zeros(B, H, N, D, dtype=torch.float32, device=q.device)
+    for i in range(0, N, chunk_size):
+        qi = q[:, :, i:i + chunk_size]
+        scores = torch.matmul(qi, k.transpose(-2, -1)) / scale
+        attn = torch.softmax(scores, dim=-1)
+        out[:, :, i:i + chunk_size] = torch.matmul(attn, v)
+    return out.to(orig_dtype)
+'''
+
+
 def _replace(m):
     indent = m.group(1)
-    original = m.group(2)
-    # Replace attention_mask with None and force an efficient kernel.
-    # Flash/mem-efficient kernels require fp16/bf16 inputs, so cast q/k/v
-    # to bf16 if needed and cast the output back to the original dtype.
-    patched = re.sub(r"\battention_mask\b", "None", original)
     return (
-        f"{indent}_orig_dtype = q.dtype\n"
-        f"{indent}if _orig_dtype not in (torch.float16, torch.bfloat16):\n"
-        f"{indent}    q, k, v = q.to(torch.bfloat16), k.to(torch.bfloat16), v.to(torch.bfloat16)\n"
-        f"{indent}with torch.backends.cuda.sdp_kernel("
-        f"enable_flash=True, enable_math=False, enable_mem_efficient=True):\n"
-        f"{indent}    {patched.lstrip()}\n"
-        f"{indent}attn_output = attn_output.to(_orig_dtype)"
+        f"{CHUNK_ATTN_FN}\n"
+        f"{indent}attn_output = _chunked_attention(q, k, v)"
     )
 
 
