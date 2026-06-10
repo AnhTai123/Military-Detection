@@ -12,8 +12,14 @@ EAGLE_DIR=/home/aiplatform/workspace/Eagle/Embodied
 cd "${EAGLE_DIR}"
 
 # 1. Attention backend: prefer flash-attn (avoids 33k×33k SDPA matrix → OOM).
+#    Override with FORCE_SDPA=1 if the flash text path misbehaves
+#    (e.g. absurd multi-TiB torch.gather allocation).
 echo "[INFO] Checking flash-attn..."
-if python -c "import flash_attn" 2>/dev/null; then
+if [ "${FORCE_SDPA:-0}" = "1" ]; then
+  echo "[INFO] FORCE_SDPA=1 — using sdpa even though flash-attn may exist."
+  ATTN_IMPL=sdpa
+  python "${REPO_DIR}/scripts/patch_flash_attn.py" --root "${EAGLE_DIR}"
+elif python -c "import flash_attn" 2>/dev/null; then
   echo "[INFO] flash-attn available."
   ATTN_IMPL=flash_attention_2
   python "${REPO_DIR}/scripts/patch_flash_attn.py" --root "${EAGLE_DIR}" --revert || true
@@ -121,7 +127,7 @@ LAUNCHER=pytorch CUDA_VISIBLE_DEVICES=0 torchrun \
   --attn_implementation "${ATTN_IMPL}" \
   --per_device_train_batch_size 1 \
   --gradient_accumulation_steps 8 \
-  --max_seq_length 8192 \
+  --max_seq_length 4096 \
   --save_steps 50 \
   --logging_steps 10 \
   --report_to tensorboard \
