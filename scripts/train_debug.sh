@@ -58,6 +58,13 @@ python "${REPO_DIR}/scripts/build_lora_model_dir.py" \
   --llm_lora 64 \
   --backbone_lora 0
 
+# 5b. Sanitize NaN/Inf in safetensors files before training.
+#     The LocateAnything-3B checkpoint ships with NaN in norm weights (likely
+#     a cast artefact). Fix them on disk so the model loads with clean weights.
+echo "[INFO] Sanitizing model weights (NaN/Inf -> 1.0 for norms, 0.0 otherwise)..."
+python "${REPO_DIR}/scripts/sanitize_model_weights.py" \
+  --model_dir "${LORA_MODEL_DIR}"
+
 # 6. Patch MoonViT: replace sdpa_attention with a per-segment implementation.
 #    Mathematically identical to the original block-diagonal mask (packing),
 #    but never materialises the N×N matrix -> no OOM, no special kernels.
