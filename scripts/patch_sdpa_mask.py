@@ -31,12 +31,18 @@ PATTERN = re.compile(
 def _replace(m):
     indent = m.group(1)
     original = m.group(2)
-    # Replace attention_mask with None and wrap in mem-efficient context
+    # Replace attention_mask with None and force an efficient kernel.
+    # Flash/mem-efficient kernels require fp16/bf16 inputs, so cast q/k/v
+    # to bf16 if needed and cast the output back to the original dtype.
     patched = re.sub(r"\battention_mask\b", "None", original)
     return (
+        f"{indent}_orig_dtype = q.dtype\n"
+        f"{indent}if _orig_dtype not in (torch.float16, torch.bfloat16):\n"
+        f"{indent}    q, k, v = q.to(torch.bfloat16), k.to(torch.bfloat16), v.to(torch.bfloat16)\n"
         f"{indent}with torch.backends.cuda.sdp_kernel("
         f"enable_flash=True, enable_math=False, enable_mem_efficient=True):\n"
-        f"{indent}    {patched.lstrip()}"
+        f"{indent}    {patched.lstrip()}\n"
+        f"{indent}attn_output = attn_output.to(_orig_dtype)"
     )
 
 
