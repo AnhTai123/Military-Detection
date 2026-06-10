@@ -58,14 +58,12 @@ python "${REPO_DIR}/scripts/build_lora_model_dir.py" \
   --llm_lora 64 \
   --backbone_lora 0
 
-# 6. Patch MoonViT SDPA: force memory-efficient backend via sdp_kernel context.
-#    Reverts previous patch first (idempotent), then re-applies fresh.
-echo "[INFO] Patching MoonViT SDPA attention mask..."
-VITMASK="${EAGLE_DIR}/eaglevl/model/moon_vit/modeling_vit.py"
-if [ -f "${VITMASK}.orig_bak" ]; then
-  cp "${VITMASK}.orig_bak" "${VITMASK}"
-fi
-python "${REPO_DIR}/scripts/patch_sdpa_mask.py" --root "${EAGLE_DIR}"
+# 6. Patch MoonViT: replace sdpa_attention with a per-segment implementation.
+#    Mathematically identical to the original block-diagonal mask (packing),
+#    but never materialises the N×N matrix -> no OOM, no special kernels.
+#    The script auto-restores from .orig_bak first, so it is idempotent.
+echo "[INFO] Patching MoonViT sdpa_attention (per-segment)..."
+python "${REPO_DIR}/scripts/patch_sdpa_segments.py" --root "${EAGLE_DIR}"
 
 # 7. Run debug training
 OUT_DIR="${EAGLE_DIR}/work_dirs/locany_military_all_debug"
