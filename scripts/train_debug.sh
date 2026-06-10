@@ -96,6 +96,12 @@ python "${REPO_DIR}/scripts/patch_mask_diag.py" --root "${EAGLE_DIR}"
 echo "[INFO] Patching wrap_llm_lora after model load..."
 python "${REPO_DIR}/scripts/patch_wrap_lora.py" --root "${EAGLE_DIR}" --rank 64 --alpha 128
 
+# 6f. Fix flash_attention_2 text path: 4D packing mask causes _upad_input to
+#     misread kv_seq_len as seq_len^2 -> torch.gather allocates 4870 GiB OOM.
+#     Patch passes None mask to _upad_input when mask is 4D float.
+echo "[INFO] Patching Qwen2 flash attention _upad_input..."
+python "${REPO_DIR}/scripts/patch_flash_qwen2.py" --root "${EAGLE_DIR}"
+
 # 6d. (Diagnostic probe disabled — root cause found: NaN in RMSNorm weights,
 #      now fixed by the sanitize block inside patch_clone_embeds.py. Re-enabling
 #      the probe would restore a stale backup and wipe the sanitize patch.)
