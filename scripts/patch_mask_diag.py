@@ -27,13 +27,17 @@ REPLACEMENTS = [
         "    return attention_mask.unsqueeze(0).unsqueeze(0)",
         "    _diag = torch.arange(seq_len, device=device)\n"
         "    attention_mask[_diag, _diag] = 0.0\n"
+        "    attention_mask = torch.nan_to_num(attention_mask, nan=0.0, posinf=0.0, neginf=-65504.0)\n"
         "    return attention_mask.unsqueeze(0).unsqueeze(0)",
     ),
-    # create_block_diff_mask_by_pe_4d: customized_mask shape [B, seq_len, seq_len]
+    # create_block_diff_mask_by_pe_4d: customized_mask and final_mask shape [B, seq_len, seq_len]
     (
         "    return customized_mask.unsqueeze(1).to(device=device), final_mask.unsqueeze(1).to(device=device)",
         "    _diag = torch.arange(seq_len, device=device)\n"
         "    customized_mask[:, _diag, _diag] = 0.0\n"
+        "    final_mask[:, _diag, _diag] = 0.0\n"
+        "    customized_mask = torch.nan_to_num(customized_mask, nan=0.0, posinf=0.0, neginf=-65504.0)\n"
+        "    final_mask = torch.nan_to_num(final_mask, nan=0.0, posinf=0.0, neginf=-65504.0)\n"
         "    return customized_mask.unsqueeze(1).to(device=device), final_mask.unsqueeze(1).to(device=device)",
     ),
 ]
