@@ -49,13 +49,16 @@ if [ "${REPO_DIR}/deepspeed_configs/zero_stage2_config.json" != "${DS_DST}" ]; t
 fi
 echo "[INFO] DeepSpeed config ready."
 
-# 5. Build a complete local model dir with LoRA enabled in config.
+# 5. Build a complete local model dir. IMPORTANT: use_llm_lora must be 0 here!
+#    Config-based LoRA wraps PEFT inside __init__, renaming all LLM params ->
+#    from_pretrained can't match checkpoint keys -> whole LLM random-init -> NaN.
+#    LoRA is applied AFTER loading via patch_wrap_lora.py (step 6e) instead.
 LORA_MODEL_DIR=/tmp/LocateAnything-3B-lora
-echo "[INFO] Building LoRA model dir..."
+echo "[INFO] Building model dir (LoRA wrapped after load, not in config)..."
 python "${REPO_DIR}/scripts/build_lora_model_dir.py" \
   --base nvidia/LocateAnything-3B \
   --out "${LORA_MODEL_DIR}" \
-  --llm_lora 64 \
+  --llm_lora 0 \
   --backbone_lora 0
 
 # 5b. Sanitize NaN/Inf in safetensors files before training.
@@ -82,6 +85,10 @@ python "${REPO_DIR}/scripts/patch_clone_embeds.py" --root "${EAGLE_DIR}"
 #     fully -inf (fully-masked rows make softmax produce NaN -> loss=nan).
 echo "[INFO] Patching SDPA mask diagonal..."
 python "${REPO_DIR}/scripts/patch_mask_diag.py" --root "${EAGLE_DIR}"
+
+# 6e. Wrap LLM LoRA AFTER from_pretrained so checkpoint keys match during load.
+echo "[INFO] Patching wrap_llm_lora after model load..."
+python "${REPO_DIR}/scripts/patch_wrap_lora.py" --root "${EAGLE_DIR}" --rank 64 --alpha 128
 
 # 6d. (Diagnostic probe disabled — root cause found: NaN in RMSNorm weights,
 #      now fixed by the sanitize block inside patch_clone_embeds.py. Re-enabling
