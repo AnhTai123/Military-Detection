@@ -71,6 +71,11 @@ python "${REPO_DIR}/scripts/patch_sdpa_segments.py" --root "${EAGLE_DIR}"
 echo "[INFO] Patching input_embeds clone..."
 python "${REPO_DIR}/scripts/patch_clone_embeds.py" --root "${EAGLE_DIR}"
 
+# 6c. Patch SDPA packing masks: force diagonal visibility so no row is
+#     fully -inf (fully-masked rows make softmax produce NaN -> loss=nan).
+echo "[INFO] Patching SDPA mask diagonal..."
+python "${REPO_DIR}/scripts/patch_mask_diag.py" --root "${EAGLE_DIR}"
+
 # 7. Run debug training
 OUT_DIR="${EAGLE_DIR}/work_dirs/locany_military_all_debug"
 mkdir -p "${OUT_DIR}"
