@@ -124,7 +124,7 @@ ACCUM="${ACCUM:-4}"
 GRAD_CKPT=True
 if [ "${NO_CKPT:-0}" = "1" ]; then GRAD_CKPT=False; fi
 echo "[INFO] gradient_accumulation_steps=${ACCUM}  grad_checkpoint=${GRAD_CKPT}"
-LAUNCHER=pytorch CUDA_VISIBLE_DEVICES=0 torchrun \
+LAUNCHER=pytorch CUDA_VISIBLE_DEVICES=0 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True torchrun \
   --standalone \
   --nproc_per_node=1 \
   eaglevl/train/locany_finetune_magi_stream.py \
