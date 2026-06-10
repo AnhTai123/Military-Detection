@@ -33,7 +33,13 @@ ASSIGN_RE = re.compile(
 def _replace(m):
     indent = m.group("indent")
     line = m.group("line")
-    return f"{indent}input_embeds = input_embeds.clone()\n{indent}{line}"
+    probe = (
+        f"{indent}if torch.isnan(vit_embeds).any():\n"
+        f"{indent}    print('[NAN-PROBE] NaN in vit_embeds (vision encoder output)!', flush=True)\n"
+        f"{indent}if torch.isnan(input_embeds).any():\n"
+        f"{indent}    print('[NAN-PROBE] NaN in input_embeds (LLM embeddings)!', flush=True)\n"
+    )
+    return f"{probe}{indent}input_embeds = input_embeds.clone()\n{indent}{line}"
 
 
 def main():
