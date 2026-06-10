@@ -33,6 +33,23 @@ ASSIGN_RE = re.compile(
 def _replace(m):
     indent = m.group("indent")
     line = m.group("line")
+    # Sanitize model weights ONCE on first forward. The released checkpoint
+    # leaves RMSNorm (*norm*.weight) values as uninitialized memory containing
+    # scattered NaN/Inf (only norm weights affected; all Linear weights clean).
+    # NaN norm weight -> NaN after RMSNorm -> NaN throughout the LLM.
+    # Fill NaN/Inf in norm weights with 1.0 (identity scale), else 0.0.
+    sanitize = (
+        f"{indent}if not getattr(self, '_weights_sanitized', False):\n"
+        f"{indent}    self._weights_sanitized = True\n"
+        f"{indent}    with torch.no_grad():\n"
+        f"{indent}        _fixed = 0\n"
+        f"{indent}        for _wn, _wp in self.named_parameters():\n"
+        f"{indent}            _bad = torch.isnan(_wp) | torch.isinf(_wp)\n"
+        f"{indent}            if _bad.any():\n"
+        f"{indent}                _wp[_bad] = 1.0 if 'norm' in _wn else 0.0\n"
+        f"{indent}                _fixed += int(_bad.sum().item())\n"
+        f"{indent}        print('[SANITIZE] fixed ' + str(_fixed) + ' NaN/Inf weight elements', flush=True)\n"
+    )
     # Check NaN AND inf: inf in vit_embeds passes isnan() but causes
     # inf/inf = NaN inside RMSNorm -> NaN propagates to q_proj output.
     probe = (
@@ -48,7 +65,7 @@ def _replace(m):
         # Use nan_to_num with conservative bounds safe for bf16/fp16.
         f"{indent}vit_embeds = torch.nan_to_num(vit_embeds, nan=0.0, posinf=65504.0, neginf=-65504.0)\n"
     )
-    return f"{probe}{indent}input_embeds = input_embeds.clone()\n{indent}{line}"
+    return f"{sanitize}{probe}{indent}input_embeds = input_embeds.clone()\n{indent}{line}"
 
 
 def main():
