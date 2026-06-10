@@ -48,7 +48,20 @@ def _replace(m):
         f"{indent}            if _bad.any():\n"
         f"{indent}                _wp[_bad] = 1.0 if 'norm' in _wn else 0.0\n"
         f"{indent}                _fixed += int(_bad.sum().item())\n"
-        f"{indent}        print('[SANITIZE] fixed ' + str(_fixed) + ' NaN/Inf weight elements', flush=True)\n"
+        f"{indent}        _fixed_buf = 0\n"
+        f"{indent}        for _bn, _bp in self.named_buffers():\n"
+        f"{indent}            if not torch.is_floating_point(_bp):\n"
+        f"{indent}                continue\n"
+        f"{indent}            _bad = torch.isnan(_bp) | torch.isinf(_bp)\n"
+        f"{indent}            if _bad.any():\n"
+        f"{indent}                _bp[_bad] = 0.0\n"
+        f"{indent}                _fixed_buf += int(_bad.sum().item())\n"
+        f"{indent}                print('[SANITIZE-BUF] ' + _bn + ' had NaN/Inf', flush=True)\n"
+        f"{indent}        _rem = 0\n"
+        f"{indent}        for _wn, _wp in self.named_parameters():\n"
+        f"{indent}            _rem += int((torch.isnan(_wp) | torch.isinf(_wp)).sum().item())\n"
+        f"{indent}        print('[SANITIZE] fixed params=' + str(_fixed) + ' buffers=' +\n"
+        f"{indent}              str(_fixed_buf) + ' remaining_bad_params=' + str(_rem), flush=True)\n"
     )
     # Check NaN AND inf: inf in vit_embeds passes isnan() but causes
     # inf/inf = NaN inside RMSNorm -> NaN propagates to q_proj output.
