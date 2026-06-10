@@ -33,11 +33,20 @@ ASSIGN_RE = re.compile(
 def _replace(m):
     indent = m.group("indent")
     line = m.group("line")
+    # Check NaN AND inf: inf in vit_embeds passes isnan() but causes
+    # inf/inf = NaN inside RMSNorm -> NaN propagates to q_proj output.
     probe = (
-        f"{indent}if torch.isnan(vit_embeds).any():\n"
-        f"{indent}    print('[NAN-PROBE] NaN in vit_embeds (vision encoder output)!', flush=True)\n"
-        f"{indent}if torch.isnan(input_embeds).any():\n"
-        f"{indent}    print('[NAN-PROBE] NaN in input_embeds (LLM embeddings)!', flush=True)\n"
+        f"{indent}if torch.isnan(vit_embeds).any() or torch.isinf(vit_embeds).any():\n"
+        f"{indent}    print('[NAN-PROBE] NaN/Inf in vit_embeds! nan=' +\n"
+        f"{indent}          str(torch.isnan(vit_embeds).sum().item()) + ' inf=' +\n"
+        f"{indent}          str(torch.isinf(vit_embeds).sum().item()), flush=True)\n"
+        f"{indent}if torch.isnan(input_embeds).any() or torch.isinf(input_embeds).any():\n"
+        f"{indent}    print('[NAN-PROBE] NaN/Inf in input_embeds! nan=' +\n"
+        f"{indent}          str(torch.isnan(input_embeds).sum().item()) + ' inf=' +\n"
+        f"{indent}          str(torch.isinf(input_embeds).sum().item()), flush=True)\n"
+        # Clamp inf/nan in vit_embeds before scatter so RMSNorm never sees inf.
+        # Use nan_to_num with conservative bounds safe for bf16/fp16.
+        f"{indent}vit_embeds = torch.nan_to_num(vit_embeds, nan=0.0, posinf=65504.0, neginf=-65504.0)\n"
     )
     return f"{probe}{indent}input_embeds = input_embeds.clone()\n{indent}{line}"
 
