@@ -42,16 +42,18 @@ NEW_FUNC = '''def sdpa_attention(
     q = q.transpose(0, 1)
     k = k.transpose(0, 1)
     v = v.transpose(0, 1)
-    attn_output = torch.empty_like(q)
+    segments = []
     for i in range(1, len(q_cu_seqlens)):
         s = q_cu_seqlens[i - 1]
         e = q_cu_seqlens[i]
-        attn_output[:, s:e] = F.scaled_dot_product_attention(
+        seg = F.scaled_dot_product_attention(
             q[:, s:e].unsqueeze(0),
             k[:, s:e].unsqueeze(0),
             v[:, s:e].unsqueeze(0),
             dropout_p=0.0,
         ).squeeze(0)
+        segments.append(seg)
+    attn_output = torch.cat(segments, dim=1)
     attn_output = attn_output.transpose(0, 1)
     attn_output = attn_output.reshape(seq_length, -1)
     return attn_output
