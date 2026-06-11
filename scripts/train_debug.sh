@@ -145,7 +145,7 @@ LAUNCHER=pytorch CUDA_VISIBLE_DEVICES=0 PYTORCH_CUDA_ALLOC_CONF=expandable_segme
   --save_steps 50 \
   --logging_steps 10 \
   --report_to tensorboard \
-  --grad_checkpoint "${GRAD_CKPT}" \
+  --gradient_checkpointing "${GRAD_CKPT}" \
   --freeze_backbone True \
   --optim adamw_torch \
   2>&1 | tee "${OUT_DIR}/training_log.txt"
