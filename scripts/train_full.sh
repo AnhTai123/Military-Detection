@@ -124,6 +124,13 @@ ACCUM="${ACCUM:-4}"
 GRAD_CKPT=True
 if [ "${NO_CKPT:-0}" = "1" ]; then GRAD_CKPT=False; fi
 echo "[INFO] gradient_accumulation_steps=${ACCUM}  grad_checkpoint=${GRAD_CKPT}"
+# Start checkpoint watcher in background: keeps checkpoint-best (lowest loss)
+# alongside checkpoint-last (save_total_limit=1 rolling checkpoint).
+python "${REPO_DIR}/scripts/watch_best_ckpt.py" \
+  --out_dir "${OUT_DIR}" --poll_secs 30 &
+WATCHER_PID=$!
+echo "[INFO] Checkpoint watcher started (pid=${WATCHER_PID})"
+
 LAUNCHER=pytorch CUDA_VISIBLE_DEVICES=0 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True torchrun \
   --standalone \
   --nproc_per_node=1 \
@@ -151,15 +158,8 @@ LAUNCHER=pytorch CUDA_VISIBLE_DEVICES=0 PYTORCH_CUDA_ALLOC_CONF=expandable_segme
   --optim adamw_torch \
   2>&1 | tee "${OUT_DIR}/training_log.txt"
 
-# Copy the last (and only) checkpoint as "best" for inference.
-# save_total_limit=1 means only the latest checkpoint is kept on disk;
-# after training finishes we keep it as checkpoint-best.
-LAST_CKPT=$(ls -td "${OUT_DIR}"/checkpoint-* 2>/dev/null | head -1)
-if [ -n "${LAST_CKPT}" ]; then
-  BEST_CKPT="${OUT_DIR}/checkpoint-best"
-  rm -rf "${BEST_CKPT}"
-  cp -r "${LAST_CKPT}" "${BEST_CKPT}"
-  echo "[INFO] Best checkpoint saved -> ${BEST_CKPT}"
-fi
+wait "${WATCHER_PID}" 2>/dev/null || true
 
+echo "[INFO] Final checkpoints in ${OUT_DIR}:"
+ls -d "${OUT_DIR}"/checkpoint-* 2>/dev/null | xargs -I{} du -sh {} 2>/dev/null
 echo "[INFO] Full training finished."
