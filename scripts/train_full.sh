@@ -142,7 +142,8 @@ LAUNCHER=pytorch CUDA_VISIBLE_DEVICES=0 PYTORCH_CUDA_ALLOC_CONF=expandable_segme
   --per_device_train_batch_size 1 \
   --gradient_accumulation_steps "${ACCUM}" \
   --max_seq_length 8192 \
-  --save_steps 100 \
+  --save_steps 50 \
+  --save_total_limit 1 \
   --logging_steps 10 \
   --report_to tensorboard \
   --gradient_checkpointing "${GRAD_CKPT}" \
@@ -150,4 +151,15 @@ LAUNCHER=pytorch CUDA_VISIBLE_DEVICES=0 PYTORCH_CUDA_ALLOC_CONF=expandable_segme
   --optim adamw_torch \
   2>&1 | tee "${OUT_DIR}/training_log.txt"
 
-echo "[INFO] Debug training finished."
+# Copy the last (and only) checkpoint as "best" for inference.
+# save_total_limit=1 means only the latest checkpoint is kept on disk;
+# after training finishes we keep it as checkpoint-best.
+LAST_CKPT=$(ls -td "${OUT_DIR}"/checkpoint-* 2>/dev/null | head -1)
+if [ -n "${LAST_CKPT}" ]; then
+  BEST_CKPT="${OUT_DIR}/checkpoint-best"
+  rm -rf "${BEST_CKPT}"
+  cp -r "${LAST_CKPT}" "${BEST_CKPT}"
+  echo "[INFO] Best checkpoint saved -> ${BEST_CKPT}"
+fi
+
+echo "[INFO] Full training finished."
