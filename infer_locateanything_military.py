@@ -86,9 +86,11 @@ SHORT_TO_FULL = {
 }
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 
-# Prompt all-classes: toàn bộ 10 class trong 1 lần hỏi
-_CLASSES_STR  = " . ".join(MILITARY_CLASSES) + " ."
-PROMPT        = f"Locate all the instances that match any of the following descriptions: {_CLASSES_STR}"
+# Prompt all-classes: PHẢI khớp tuyệt đối format lúc training
+# (convert_coco_to_locany_all_classes.py: ALL_CLASSES_PROMPT = " . ".join(...) + " .")
+# Model fine-tuned chưa từng thấy câu dẫn "Locate all the instances..." nên
+# thêm câu đó vào sẽ làm model sinh output rác.
+PROMPT        = " . ".join(MILITARY_CLASSES) + " ."
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -288,10 +290,9 @@ def run_one_image(model, tokenizer, processor, item, device, mode,
             max_new_tokens=max_new_tokens,
             use_cache=True,
             generation_mode=mode,
-            temperature=temperature,
-            do_sample=True,
-            top_p=0.9,
-            repetition_penalty=1.1,
+            do_sample=False,
+            num_beams=1,
+            repetition_penalty=1.05,
             verbose=False,
         )
     latency = time.perf_counter() - t0
