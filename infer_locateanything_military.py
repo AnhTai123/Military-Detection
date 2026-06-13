@@ -254,11 +254,14 @@ def run_one_image(model, tokenizer, processor, item, device, mode,
     img_pil = Image.open(item["image_path"]).convert("RGB")
     w, h = img_pil.size
 
+    # Format khớp CHÍNH XÁC với training JSONL:
+    # human: "<image-1>\n{prompt}"
+    # (không dùng {"type": "image"} dict — cách đó dùng chat template khác)
     messages = [{
         "role": "user",
         "content": [
             {"type": "image", "image": img_pil},
-            {"type": "text",  "text":  PROMPT},
+            {"type": "text",  "text":  f"<image-1>\n{PROMPT}"},
         ],
     }]
 
@@ -292,7 +295,6 @@ def run_one_image(model, tokenizer, processor, item, device, mode,
             generation_mode=mode,
             do_sample=False,
             num_beams=1,
-            repetition_penalty=1.05,
             verbose=False,
         )
     latency = time.perf_counter() - t0
