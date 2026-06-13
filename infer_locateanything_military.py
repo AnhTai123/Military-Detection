@@ -714,8 +714,9 @@ def main():
     except Exception:
         model = AutoModel.from_pretrained(
             model_id, torch_dtype=dtype, trust_remote_code=True,
+            attn_implementation="sdpa",
         ).to(args.device).eval()
-        print("Model loaded [standard attention]")
+        print("Model loaded [sdpa]")
 
     # ── Inference loop ────────────────────────────────────────────────────────
     all_results = []
