@@ -70,6 +70,20 @@ SHORT_NAMES = {
 }
 
 MODEL_ID   = "nvidia/LocateAnything-3B"
+
+# Map short category names (from selected_best_25) → full class names
+SHORT_TO_FULL = {
+    "bm30smerch":  "BM-30 Smerch multiple rocket launcher",
+    "bradley":     "M2 Bradley infantry fighting vehicle",
+    "btr90":       "BTR-90 armored personnel carrier",
+    "f22":         "F-22 Raptor fighter jet",
+    "f35":         "F-35 Lightning II fighter jet",
+    "gorkskov":    "Admiral Gorshkov class frigate",
+    "m142_himars": "HIMARS rocket artillery launcher",
+    "m1_abrams":   "M1 Abrams main battle tank",
+    "t90":         "T-90 main battle tank",
+    "zumwalt":     "Zumwalt class destroyer",
+}
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 
 # Prompt all-classes: toàn bộ 10 class trong 1 lần hỏi
@@ -120,11 +134,14 @@ def load_coco_items(ann_file, img_root, limit=None):
     with open(ann_file, encoding="utf-8") as f:
         coco = json.load(f)
 
-    # category_id → tên class chuẩn
+    # category_id → tên class chuẩn (hỗ trợ cả tên đầy đủ và tên ngắn)
     cat_id_to_name = {}
     for c in coco["categories"]:
-        if c["name"] in MILITARY_CLASSES:
-            cat_id_to_name[c["id"]] = c["name"]
+        name = c["name"]
+        if name in MILITARY_CLASSES:
+            cat_id_to_name[c["id"]] = name
+        elif name in SHORT_TO_FULL:
+            cat_id_to_name[c["id"]] = SHORT_TO_FULL[name]
 
     # group annotations by image_id
     anns_by_img = defaultdict(list)
@@ -135,12 +152,18 @@ def load_coco_items(ann_file, img_root, limit=None):
     img_root = Path(img_root)
     items = []
 
+    # Build lookup: basename → full path (for subdirectory layouts)
+    img_lookup = {}
+    for p in img_root.rglob("*"):
+        if p.suffix.lower() in IMAGE_EXTS:
+            img_lookup[p.name] = p
+
     for img in coco["images"]:
-        img_path = img_root / img["file_name"]
+        fname = img["file_name"]
+        img_path = img_root / fname
         if not img_path.exists():
-            # thử tìm chỉ theo tên file (nếu file_name có subdirectory)
-            img_path = img_root / Path(img["file_name"]).name
-        if not img_path.exists():
+            img_path = img_lookup.get(Path(fname).name)
+        if not img_path or not img_path.exists():
             continue
 
         anns = anns_by_img.get(img["id"], [])
