@@ -110,6 +110,9 @@ def parse_args():
                    default=MODEL_ID,
                    help="Model ID hoặc path checkpoint fine-tuned")
     p.add_argument("--device",      default="cuda:0")
+    p.add_argument("--attn",        default="sdpa",
+                   choices=["sdpa", "flash_attention_2", "eager"],
+                   help="Attention backend cho inference (mặc định sdpa)")
     p.add_argument("--mode",        default="hybrid",
                    choices=["fast", "hybrid", "slow"])
     p.add_argument("--max-new-tokens", type=int, default=512)
@@ -705,18 +708,21 @@ def main():
     processor = AutoProcessor.from_pretrained(
         model_id, trust_remote_code=True,
         min_pixels=128*28*28, max_pixels=512*28*28)
-    try:
-        model = AutoModel.from_pretrained(
-            model_id, torch_dtype=dtype, trust_remote_code=True,
-            attn_implementation="flash_attention_2",
-        ).to(args.device).eval()
-        print("Model loaded [flash_attention_2]")
-    except Exception:
-        model = AutoModel.from_pretrained(
-            model_id, torch_dtype=dtype, trust_remote_code=True,
-            attn_implementation="sdpa",
-        ).to(args.device).eval()
-        print("Model loaded [sdpa]")
+    # NOTE: dùng sdpa cho inference. Checkpoint fine-tuned lưu config với
+    # _attn_implementation=flash_attention_2, nhưng đường generate (MoonViT +
+    # packing) báo lỗi với flash khi sinh từng token -> ép sdpa cho ổn định.
+    for attn in (args.attn, "sdpa", "eager"):
+        try:
+            model = AutoModel.from_pretrained(
+                model_id, torch_dtype=dtype, trust_remote_code=True,
+                attn_implementation=attn,
+            ).to(args.device).eval()
+            print(f"Model loaded [{attn}]")
+            break
+        except Exception as e:
+            print(f"[WARN] attn={attn} failed: {e}")
+    else:
+        raise RuntimeError("Could not load model with any attn_implementation")
 
     # ── Inference loop ────────────────────────────────────────────────────────
     all_results = []
