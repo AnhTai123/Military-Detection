@@ -77,6 +77,15 @@ def build_vlm(args):
     if args.vlm == "clip":
         from .vlm.clip_classifier import CLIPClassifier
         return CLIPClassifier(device=args.device)
+    if args.vlm == "siglip":
+        from .vlm.siglip_classifier import SigLIPClassifier
+        return SigLIPClassifier(device=args.device)
+    if args.vlm == "dinov2":
+        from .vlm.dinov2_classifier import DINOv2Classifier
+        if not args.vlm_path:
+            raise ValueError("--vlm dinov2 cần --vlm-path tới file head .pt "
+                             "(train bằng tracking_pipeline.train_dino_head)")
+        return DINOv2Classifier(head_path=args.vlm_path, device=args.device)
     if args.vlm == "grounding_dino":
         from .vlm.grounding_dino import GroundingDINOVLM
         return GroundingDINOVLM(
@@ -121,8 +130,8 @@ def main():
                     choices=["yolo", "grounding_dino"])
     ap.add_argument("--detector-path", required=True,
                     help="YOLO: path to .pt file | GDino: HF model path")
-    ap.add_argument("--vlm", default="grounding_dino",
-                    choices=["clip", "grounding_dino", "qwen"])
+    ap.add_argument("--vlm", default="dinov2",
+                    choices=["clip", "siglip", "dinov2", "grounding_dino", "qwen"])
     ap.add_argument("--vlm-path", default=None,
                     help="VLM model path (GDino fine-tuned / Qwen). "
                          "Không cần nếu --vlm clip")
